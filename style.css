@@ -1,0 +1,187 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #ffd300;
+}
+
+.toolbar {
+  position: fixed;
+  top: 5px;
+  left: 5px;
+  display: flex;
+  gap: 8px;
+  z-index: 10000;
+}
+
+.toolbar button {
+  background-color: rgba(255, 211, 0, 0.6);
+  color: #000;
+  font-weight: bold;
+  padding: 10px 20px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(255, 211, 0, 0.6), 0 0 16px rgba(255, 211, 0, 0.4);
+  transition: all 0.2s ease-in-out;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.toolbar button:hover {
+  background-color: rgba(255, 211, 0, 0.85);
+  box-shadow: 0 0 12px rgba(255, 211, 0, 0.9), 0 0 24px rgba(255, 211, 0, 0.6);
+  border: 2px solid #000300;
+  transform: scale(1.05);
+}
+
+#windowsContainer {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: none;
+}
+
+.window {
+  position: absolute;
+  width: 400px;
+  height: 300px;
+  background: none;
+  border-top: none;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  cursor: default;
+  user-select: none;
+  z-index: 99;
+  padding: 0;
+  margin: 0;
+  transform-origin: center;
+}
+
+.window.active {
+  z-index: 999;
+}
+
+.window.active .window-header {
+  background-color: #00FFFF;
+}
+
+.window-header {
+  background-color: #ff0000;
+  color: white;
+  padding: 10px;
+  cursor: move;
+  text-align: center;
+  border-radius: 8px 8px 0 0;
+  user-select: none;
+  position: relative;
+  backdrop-filter: blur(5px);
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+button.close-btn, button.minimize-btn {
+  position: absolute;
+  top: 5px;
+  border: none;
+  border-radius: 50%;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-weight: bold;
+  opacity: 0.85;
+  transition: all 0.2s ease;
+  color: white;
+}
+
+button.close-btn {
+  right: 10px;
+  background: #ff0000;
+}
+
+button.minimize-btn {
+  right: 40px;
+  background: gray;
+}
+
+button.close-btn:hover,
+button.minimize-btn:hover {
+  opacity: 1;
+}
+
+.CodeMirror {
+  font-family: "Fira Code", monospace !important;
+  font-weight: 600;
+  font-style: normal;
+  font-size: 18px;
+  height: 100%;
+  resize: both;
+  overflow: hidden;
+  opacity: 0.85;
+}
+
+.tabs-container {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: none;
+  padding: 10px 0;
+  z-index: 10001;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow-y: hidden;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 0 20px;
+  scrollbar-width: thin;
+  user-select: none;
+}
+
+.tabs::-webkit-scrollbar {
+  height: 8px;
+}
+
+.tabs::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+}
+
+.tab {
+  padding: 8px 16px;
+  background: none;
+  color: black;
+  font-weight: bold;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  font-family: 'Orbitron', sans-serif;
+  user-select: none;
+}
+
+.tab:hover {
+  background-color: rgba(255, 211, 0, 0.85);
+  transform: scale(1.05);
+}
+
+.tab.active {
+  background-color: rgba(255, 211, 0, 0.85);
+  transform: scale(1.05);
+}
+
+.tab.minimized {
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  transform: none;
+}
