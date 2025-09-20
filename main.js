@@ -76,18 +76,23 @@ window.addEventListener("DOMContentLoaded", () => {
     activeWindow = windowElement;
 
     const container = windowElement._container;
-    const editor = windowElement._editor;
     const baseWidth = 600;
     const baseHeight = 360;
+    const lastWidth = windowElement._lastWidth || baseWidth;
+    const lastHeight = windowElement._lastHeight || baseHeight;
 
-    container.style.width = baseWidth * scale + "px";
-    container.style.height = baseHeight * scale + "px";
+    container.style.width = lastWidth * scale + "px";
+    container.style.height = lastHeight * scale + "px";
 
-    const wrapper = editor.getWrapperElement();
-    wrapper.style.width = "100%";
-    wrapper.style.height = "100%";
-    wrapper.style.fontSize = `${14 * scale}px`;
-    editor.refresh();
+    if (windowElement._editor) {
+      // Only for text/code windows
+      const editor = windowElement._editor;
+      const wrapper = editor.getWrapperElement();
+      wrapper.style.width = "100%";
+      wrapper.style.height = "100%";
+      wrapper.style.fontSize = `${14 * scale}px`;
+      editor.refresh();
+    }
 
     const headerHeight = windowElement.querySelector(".window-header").offsetHeight;
     windowElement.style.width = container.offsetWidth + "px";
@@ -106,7 +111,7 @@ window.addEventListener("DOMContentLoaded", () => {
     closeButton.classList.add("close-btn");
     closeButton.innerText = "X";
     closeButton.addEventListener("click", () => {
-      windowElement._resizeObserver.disconnect();
+      windowElement._resizeObserver?.disconnect();
       windowElement.remove();
       if (windowElement._tab) {
         windowElement._tab.remove();
@@ -130,6 +135,11 @@ window.addEventListener("DOMContentLoaded", () => {
     minimizeButton.classList.add("minimize-btn");
     minimizeButton.innerText = "_";
     minimizeButton.addEventListener("click", () => {
+      // Save current size before minimizing (for both code and image windows)
+      const editorContainer = windowElement._container;
+      windowElement._lastWidth = editorContainer.offsetWidth / scale;
+      windowElement._lastHeight = editorContainer.offsetHeight / scale;
+
       windowElement.style.display = "none";
       if (windowElement._tab) {
         windowElement._tab.classList.remove("active");
@@ -147,9 +157,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
     const editorContainer = document.createElement("div");
     editorContainer.classList.add("editor-container");
-    editorContainer.style.width = baseWidth * scale + "px";   
-    editorContainer.style.height = baseHeight * scale + "px"; 
-    editorContainer.style.resize = "both";  
+    editorContainer.style.width = baseWidth * scale + "px";
+    editorContainer.style.height = baseHeight * scale + "px";
+    editorContainer.style.resize = "both";
     editorContainer.style.overflow = "hidden";
 
     windowElement.appendChild(windowHeader);
@@ -169,6 +179,119 @@ window.addEventListener("DOMContentLoaded", () => {
 
     windowElement._editor.setValue(content);
     windowElement.dataset.scale = scale;
+  }
+
+  // Check if the file is an image
+  function isImageFile(file) {
+    if (file.type && file.type.startsWith("image/")) return true;
+    const imgExts = ["png", "jpg", "jpeg", "gif", "bmp", "webp", "svg"];
+    const ext = file.name.split('.').pop().toLowerCase();
+    return imgExts.includes(ext);
+  }
+
+  // Create a window for an image
+  function createImageWindow(name, dataURL) {
+    const windowElement = document.createElement("div");
+    windowElement.classList.add("window");
+
+    const windowHeader = document.createElement("div");
+    windowHeader.classList.add("window-header");
+    windowHeader.innerText = name;
+
+    const closeButton = document.createElement("button");
+    closeButton.classList.add("close-btn");
+    closeButton.innerText = "X";
+    closeButton.addEventListener("click", () => {
+      windowElement._resizeObserver?.disconnect();
+      windowElement.remove();
+      if (windowElement._tab) {
+        windowElement._tab.remove();
+        if (activeTab === windowElement._tab) activeTab = null;
+      }
+      if (activeWindow === windowElement) activeWindow = null;
+      const remainingWindows = document.querySelectorAll(".window");
+      if (remainingWindows.length > 0) {
+        const lastWindow = remainingWindows[remainingWindows.length - 1];
+        lastWindow.classList.add("active");
+        activeWindow = lastWindow;
+        const lastTab = lastWindow._tab;
+        if (lastTab) {
+          lastTab.classList.add("active");
+          activeTab = lastTab;
+        }
+      }
+    });
+
+    const minimizeButton = document.createElement("button");
+    minimizeButton.classList.add("minimize-btn");
+    minimizeButton.innerText = "_";
+    minimizeButton.addEventListener("click", () => {
+      // Save size for image windows as well
+      const imgContainer = windowElement._container;
+      windowElement._lastWidth = imgContainer.offsetWidth / scale;
+      windowElement._lastHeight = imgContainer.offsetHeight / scale;
+
+      windowElement.style.display = "none";
+      if (windowElement._tab) {
+        windowElement._tab.classList.remove("active");
+        windowElement._tab.classList.add("minimized");
+      }
+      if (activeWindow === windowElement) activeWindow = null;
+      if (activeTab === windowElement._tab) activeTab = null;
+    });
+
+    const baseWidth = 600;
+    const baseHeight = 360;
+
+    windowElement.style.left = (-panX + (window.innerWidth - baseWidth) / 2) + "px";
+    windowElement.style.top  = -panY + (window.innerHeight - baseHeight) / 2 + "px";
+
+    const imgContainer = document.createElement("div");
+    imgContainer.classList.add("editor-container");
+    imgContainer.style.width = baseWidth * scale + "px";
+    imgContainer.style.height = baseHeight * scale + "px";
+    imgContainer.style.resize = "both";
+    imgContainer.style.overflow = "hidden";
+    imgContainer.style.display = "flex";
+    imgContainer.style.alignItems = "center";
+    imgContainer.style.justifyContent = "center";
+
+    const img = document.createElement("img");
+    img.src = dataURL;
+    img.style.width = "100%";
+    img.style.height = "100%";
+    img.style.objectFit = "contain";
+    img.style.display = "block";
+    img.draggable = false;
+
+    imgContainer.appendChild(img);
+
+    windowElement.appendChild(windowHeader);
+    windowElement.appendChild(closeButton);
+    windowElement.appendChild(minimizeButton);
+    windowElement.appendChild(imgContainer);
+    windowsContainer.appendChild(windowElement);
+
+    createTab(name, windowElement);
+
+    if (activeWindow) activeWindow.classList.remove("active");
+    windowElement.classList.add("active");
+    activeWindow = windowElement;
+
+    initWindowDrag(windowElement);
+
+    // ResizeObserver to fit the window size to the container
+    const resizeObserver = new ResizeObserver(() => {
+      const rect = imgContainer.getBoundingClientRect();
+      const headerHeight = windowElement.querySelector(".window-header").offsetHeight;
+      windowElement.style.width = rect.width + "px";
+      windowElement.style.height = rect.height + headerHeight + "px";
+    });
+    resizeObserver.observe(imgContainer);
+    windowElement._container = imgContainer;
+    windowElement._resizeObserver = resizeObserver;
+    windowElement._isImageWindow = true;
+    windowElement._imageElement = img;
   }
 
   function initWindowDrag(windowElement) {
@@ -279,7 +402,6 @@ window.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll(".window").forEach(win => {
       if (win.style.display === "none") return;
       const container = win._container;
-      const editor = win._editor;
       const rect = win.getBoundingClientRect();
       const offsetX = cursorX - rect.left;
       const offsetY = cursorY - rect.top;
@@ -289,11 +411,18 @@ window.addEventListener("DOMContentLoaded", () => {
       container.style.width = newWidth + "px";
       container.style.height = newHeight + "px";
 
-      const wrapper = editor.getWrapperElement();
-      wrapper.style.width = "100%";
-      wrapper.style.height = "100%";
-      wrapper.style.fontSize = `${14 * scale}px`;
-      editor.refresh();
+      if (!win._isImageWindow) {
+        // Only for CodeMirror windows
+        const editor = win._editor;
+        if (editor) {
+          const wrapper = editor.getWrapperElement();
+          wrapper.style.width = "100%";
+          wrapper.style.height = "100%";
+          wrapper.style.fontSize = `${14 * scale}px`;
+          editor.refresh();
+        }
+      }
+      // For images nothing needs to be done, img is always 100%
 
       const headerHeight = win.querySelector(".window-header").offsetHeight;
       win.style.width = container.offsetWidth + "px";
@@ -307,7 +436,7 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   document.addEventListener("mousedown", (e) => {
-    if (e.button === 1) { 
+    if (e.button === 1) {
       isPanning = true;
       startX = e.clientX;
       startY = e.clientY;
@@ -342,15 +471,25 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("openFileBtn").addEventListener("click", () => {
-    document.getElementById("fileInput").click();
+    // Accept all files
+    const fileInput = document.getElementById("fileInput");
+    fileInput.accept = "";
+    fileInput.value = "";
+    fileInput.click();
   });
 
   document.getElementById("fileInput").addEventListener("change", (event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => createWindow(file.name, e.target.result);
-      reader.readAsText(file);
+      if (isImageFile(file)) {
+        const reader = new FileReader();
+        reader.onload = (e) => createImageWindow(file.name, e.target.result);
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => createWindow(file.name, e.target.result);
+        reader.readAsText(file);
+      }
     }
   });
 
@@ -359,9 +498,15 @@ window.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const files = Array.from(e.dataTransfer.files);
     files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (e) => createWindow(file.name, e.target.result);
-      reader.readAsText(file);
+      if (isImageFile(file)) {
+        const reader = new FileReader();
+        reader.onload = (e) => createImageWindow(file.name, e.target.result);
+        reader.readAsDataURL(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => createWindow(file.name, e.target.result);
+        reader.readAsText(file);
+      }
     });
   });
 
@@ -381,15 +526,26 @@ window.addEventListener("DOMContentLoaded", () => {
   });
 
   function saveWindow(win) {
-    const editor = win._editor;
-    const filename = win.querySelector(".window-header").innerText || "untitled.txt";
-    const content = editor.getValue();
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (win._isImageWindow && win._imageElement) {
+      // Save image as file
+      const filename = win.querySelector(".window-header").innerText || "image.png";
+      const a = document.createElement("a");
+      a.href = win._imageElement.src;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      const editor = win._editor;
+      const filename = win.querySelector(".window-header").innerText || "untitled.txt";
+      const content = editor.getValue();
+      const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   }
 });
